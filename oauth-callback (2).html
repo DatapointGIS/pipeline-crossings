@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Signing in…</title>
+  <style>
+    body { font-family: sans-serif; background: #0d0f14; color: #e8eaf0;
+           display: flex; align-items: center; justify-content: center;
+           height: 100vh; margin: 0; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <p id="msg">Completing sign-in…</p>
+  <script>
+    // ArcGIS implicit grant returns token in URL hash:
+    // #access_token=xxx&expires_in=7200&username=xxx&...
+    const hash   = window.location.hash.substring(1);
+    const params = {};
+    hash.split('&').forEach(p => {
+      const [k, v] = p.split('=');
+      if (k) params[decodeURIComponent(k)] = decodeURIComponent(v || '');
+    });
+
+    if (params.access_token) {
+      // Post token to the opener window
+      if (window.opener) {
+        window.opener.postMessage(params, '*');
+        document.getElementById('msg').textContent = '✅ Signed in! You can close this window.';
+        setTimeout(() => window.close(), 1500);
+      } else {
+        // No opener — we were redirected in same tab.
+        // Store in sessionStorage and redirect back to app.
+        sessionStorage.setItem('agol_token_payload', JSON.stringify(params));
+        document.getElementById('msg').textContent = 'Redirecting…';
+        window.location.href = 'index.html';
+      }
+    } else if (params.error) {
+      document.getElementById('msg').textContent = '❌ Login failed: ' + (params.error_description || params.error);
+    } else {
+      document.getElementById('msg').textContent = '❌ No token received.';
+    }
+  </script>
+</body>
+</html>
